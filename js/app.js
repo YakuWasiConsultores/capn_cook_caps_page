@@ -1,8 +1,10 @@
 /**
- * CAP'N COOK® // MAIN APP, CART STORE & VOICEMAIL AUDIO
- * Carrito de compras, filtros de catálogo, checkout dual WhatsApp/Deuna para Ecuador,
- * y reproducción automática del mensaje de voz de Jesse Pinkman a los 3 segundos.
+ * CAP'N COOK® // MAIN APP, CART STORE & WHATSAPP CHECKOUT ENGINE
+ * Número oficial de pedidos: 0960105825 (+593960105825)
+ * Soporte para cantidades múltiples, selector de 20+ frases personalizadas y checkout interactivo.
  */
+
+const CAPN_WHATSAPP_PHONE = "593960105825";
 
 class CapnStore {
   constructor() {
@@ -25,9 +27,9 @@ class CapnStore {
     this.updateCartUI();
     this.initVoicemailAudio();
 
-    // Inicializar laboratorio
+    // Inicializar laboratorio de cocina
     if (typeof CookLabEngine !== 'undefined') {
-      window.cookLab = new CookLabEngine(CAPN_PRODUCTS, COOK_LAB_CONFIG);
+      window.cookLab = new CookLabEngine(CAPN_PRODUCTS, COOK_LAB_CONFIG, CAPN_CUSTOM_PHRASES);
     }
   }
 
@@ -38,7 +40,6 @@ class CapnStore {
     this.voicemailAudio = new Audio("assets/jesse_voicemail.mp3");
     this.voicemailAudio.preload = "auto";
 
-    // Notificar cuando termine
     this.voicemailAudio.addEventListener("ended", () => {
       this.isPlayingVoicemail = false;
       this.updateAudioButtonState(false);
@@ -46,12 +47,11 @@ class CapnStore {
       if (waveEl) waveEl.style.display = "none";
     });
 
-    // 3 SEGUNDOS DESPUÉS DE CARGAR LA PÁGINA
+    // Reproducción automática a los 3 segundos
     setTimeout(() => {
       this.triggerVoicemailPlayback();
     }, 3000);
 
-    // Botón manual en hero/navbar
     const triggerBtns = document.querySelectorAll(".btn-trigger-voicemail");
     triggerBtns.forEach(btn => {
       btn.addEventListener("click", () => {
@@ -81,8 +81,6 @@ class CapnStore {
   }
 
   showAutoplayInteractionPrompt() {
-    // Si el navegador bloqueó el audio sin interacción previa,
-    // creamos un banner y escuchamos el primer clic en cualquier parte de la pantalla.
     const prompt = document.getElementById("voicemail-auto-prompt");
     if (prompt) prompt.classList.add("visible");
 
@@ -146,7 +144,7 @@ class CapnStore {
         <span style="font-size:1.4rem; animation: pulse 0.8s infinite;">📞</span>
         <div>
           <strong style="color:var(--hazmat-yellow); display:block; font-size:0.85rem;">MENSAJE DE VOZ DE JESSE PINKMAN:</strong>
-          <span style="font-size:0.75rem; color:#FFF;">"¿Qué hay de nuevo perr4? 148-3 to the 3 to the 6 to the 9, representing the ABQ, what up, biatch?! Deja tu mensaje al tono..."</span>
+          <span style="font-size:0.75rem; color:#FFF;">"¿Qué hay de nuevo perr4? 148-3 to the 3 to the 6 to the 9, representando el ABQ, what up, biatch?! Deja tu mensaje al tono..."</span>
         </div>
       </div>
     `;
@@ -179,7 +177,7 @@ class CapnStore {
       osc.start();
       osc.stop(this.audioCtx.currentTime + 0.05);
     } catch (e) {
-      // Audio fallback silencioso
+      // Audio fallback
     }
   }
 
@@ -228,7 +226,7 @@ class CapnStore {
         <div class="card-img-stage" onclick="window.CapnApp.openQuickView('${p.id}')">
           <img src="${p.images[0]}" alt="${p.name}" class="img-main">
           ${p.images[1] ? `<img src="${p.images[1]}" alt="${p.name} vista lateral" class="img-side">` : ''}
-          <button class="quick-view-badge" title="Vista Rápida">👁️ VISTA RÁPIDA</button>
+          <button class="quick-view-badge" title="Vista Rápida">👁️ VISTA DETALLADA</button>
         </div>
 
         <div class="card-details-body">
@@ -241,7 +239,20 @@ class CapnStore {
 
           <div class="card-specs-row">
             <span class="spec-bubble">${p.closure}</span>
-            <span class="spec-bubble">Underbrim: ${p.underbrim}</span>
+            <span class="spec-bubble">Base: ${p.underbrim}</span>
+          </div>
+
+          <!-- Selector de Frase Personalizada -->
+          <div class="card-phrase-box">
+            <label class="card-phrase-lbl">✍️ Frase Personalizada:</label>
+            <select class="card-phrase-select" id="phrase-${p.id}">
+              <option value="${p.defaultPhrase}" selected>★ "${p.defaultPhrase}"</option>
+              ${CAPN_CUSTOM_PHRASES.filter(ph => ph !== p.defaultPhrase).map(ph => `
+                <option value="${ph}">"${ph}"</option>
+              `).join('')}
+              <option value="CUSTOM_WRITE">[Escribir mi propia frase...]</option>
+            </select>
+            <input type="text" class="card-phrase-custom-input" id="phrase-custom-${p.id}" placeholder="Escribe tu frase personalizada aquí..." style="display: none;">
           </div>
 
           <div class="card-purchase-row">
@@ -250,23 +261,63 @@ class CapnStore {
               ${p.originalPrice > p.price ? `<span class="price-was">$${p.originalPrice.toFixed(2)}</span>` : ''}
             </div>
 
-            <div class="card-actions">
-              <select class="mini-size-select" id="size-${p.id}" aria-label="Seleccionar talla">
-                <option value="Ajustable (OSFM)">Ajustable</option>
-                <option value="7 (55.8 cm)">7 (55.8cm)</option>
-                <option value="7 1/8 (56.8 cm)" selected>7 1/8 ★</option>
-                <option value="7 1/4 (57.7 cm)">7 1/4</option>
-                <option value="7 3/8 (58.7 cm)">7 3/8</option>
-                <option value="7 1/2 (59.6 cm)">7 1/2</option>
-              </select>
-              <button class="btn-card-add" onclick="window.CapnApp.addFromCard('${p.id}')" title="Añadir a la Bolsa">
-                +🛒
-              </button>
+            <div class="card-actions-unified">
+              <div class="card-controls-row">
+                <select class="mini-size-select" id="size-${p.id}" aria-label="Seleccionar talla">
+                  <option value="Ajustable (OSFM)">Ajustable</option>
+                  <option value="7 (55.8 cm)">7 (55.8cm)</option>
+                  <option value="7 1/8 (56.8 cm)" selected>7 1/8 ★</option>
+                  <option value="7 1/4 (57.7 cm)">7 1/4</option>
+                  <option value="7 3/8 (58.7 cm)">7 3/8</option>
+                  <option value="7 1/2 (59.6 cm)">7 1/2</option>
+                </select>
+
+                <!-- Selector de Cantidad -->
+                <div class="mini-qty-box">
+                  <button type="button" class="mini-qty-btn" onclick="window.CapnApp.changeCardQty('${p.id}', -1)">-</button>
+                  <input type="number" id="qty-${p.id}" class="mini-qty-input" value="1" min="1" max="${p.stock || 10}" readonly>
+                  <button type="button" class="mini-qty-btn" onclick="window.CapnApp.changeCardQty('${p.id}', 1)">+</button>
+                </div>
+              </div>
+
+              <div class="card-buttons-row">
+                <button class="btn-card-add-full" onclick="window.CapnApp.addFromCard('${p.id}')" title="Añadir al barril de dinero">
+                  <span>🛒 AGREGAR</span>
+                </button>
+                <button class="btn-card-wa-direct" onclick="window.CapnApp.orderDirectWa('${p.id}')" title="Comprar directo por WhatsApp">
+                  <span>💬 WHATSAPP</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </article>
     `).join('');
+
+    // Listener para input de frase personalizada
+    items.forEach(p => {
+      const select = document.getElementById(`phrase-${p.id}`);
+      const customInput = document.getElementById(`phrase-custom-${p.id}`);
+      if (select && customInput) {
+        select.addEventListener("change", (e) => {
+          if (e.target.value === "CUSTOM_WRITE") {
+            customInput.style.display = "block";
+            customInput.focus();
+          } else {
+            customInput.style.display = "none";
+          }
+        });
+      }
+    });
+  }
+
+  changeCardQty(productId, delta) {
+    const qtyInput = document.getElementById(`qty-${productId}`);
+    if (!qtyInput) return;
+    let val = parseInt(qtyInput.value, 10) || 1;
+    val = Math.max(1, val + delta);
+    qtyInput.value = val;
+    this.playBeep();
   }
 
   bindCatalogFilters() {
@@ -321,22 +372,69 @@ class CapnStore {
     this.renderCatalog(filtered);
   }
 
+  getChosenPhrase(productId) {
+    const select = document.getElementById(`phrase-${productId}`);
+    const customInput = document.getElementById(`phrase-custom-${productId}`);
+    if (select) {
+      if (select.value === "CUSTOM_WRITE") {
+        return (customInput && customInput.value.trim()) ? customInput.value.trim() : "Edición Especial Cap'n Cook";
+      }
+      return select.value;
+    }
+    const product = CAPN_PRODUCTS.find(p => p.id === productId);
+    return product ? product.defaultPhrase : "Say My Name";
+  }
+
   addFromCard(productId) {
     const sizeSelect = document.getElementById(`size-${productId}`);
     const size = sizeSelect ? sizeSelect.value : "Ajustable";
-    this.addToCart(productId, size);
+    const qtyInput = document.getElementById(`qty-${productId}`);
+    const qty = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
+    const phrase = this.getChosenPhrase(productId);
+
+    this.addToCart(productId, size, qty, phrase);
+  }
+
+  orderDirectWa(productId) {
+    const p = CAPN_PRODUCTS.find(item => item.id === productId);
+    if (!p) return;
+    const sizeSelect = document.getElementById(`size-${productId}`);
+    const size = sizeSelect ? sizeSelect.value : "Ajustable";
+    const qtyInput = document.getElementById(`qty-${productId}`);
+    const qty = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
+    const phrase = this.getChosenPhrase(productId);
+    const total = (p.price * qty).toFixed(2);
+
+    const msg = `¡Hola! Quiero una gorra ${p.name} y una frase personalizada.
+
+🧢 Modelo: ${p.name}
+🧪 Lote: ${p.sku} // ${p.silhouette}
+📏 Talla: ${size}
+🔢 Cantidad: ${qty} unidad(es)
+✍️ Frase Personalizada: "${phrase}"
+💵 Precio: $${p.price.toFixed(2)} c/u | Total: $${total}
+
+🚚 Envío: Servientrega a todo Ecuador
+📍 Mi Ciudad: (ej: Quito / Guayaquil / Cuenca)
+👤 Nombre y Apellido: 
+💳 Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`;
+
+    window.open(`https://wa.me/${CAPN_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, "_blank");
   }
 
   // ==========================================
   // CARRITO DE COMPRAS & CHECKOUT
   // ==========================================
-  addToCart(productId, size = "Ajustable") {
+  addToCart(productId, size = "Ajustable", quantity = 1, phrase = "") {
     const product = CAPN_PRODUCTS.find(p => p.id === productId);
     if (!product) return;
 
-    const existingIndex = this.cart.findIndex(i => i.id === productId && i.size === size);
+    const chosenPhrase = phrase || product.defaultPhrase || "99.1% Pureza Krystal";
+
+    // Buscar si ya existe la misma gorra con la misma talla Y la misma frase
+    const existingIndex = this.cart.findIndex(i => i.id === productId && i.size === size && i.phrase === chosenPhrase);
     if (existingIndex > -1) {
-      this.cart[existingIndex].quantity += 1;
+      this.cart[existingIndex].quantity += quantity;
     } else {
       this.cart.push({
         id: product.id,
@@ -345,14 +443,15 @@ class CapnStore {
         price: product.price,
         image: product.images[0],
         size: size,
-        quantity: 1
+        phrase: chosenPhrase,
+        quantity: Math.max(1, quantity)
       });
     }
 
     this.saveCart();
     this.updateCartUI();
     this.playBeep();
-    this.showToast(`¡Gorra agregada al barril de dinero! (${product.name})`);
+    this.showToast(`¡Agregada ${quantity}x al barril! (${product.name})`);
     this.openCart();
   }
 
@@ -399,7 +498,7 @@ class CapnStore {
           <div class="empty-barrel-box">
             <span style="font-size: 3rem;">🛢️</span>
             <h4>TU BARRIL DE DINERO ESTÁ VACÍO</h4>
-            <p>¿Qué esperas, hermano? Añade una corona al lote antes de que la DEA se entere.</p>
+            <p>Añade una gorra al lote antes de que la DEA se entere.</p>
           </div>
         `;
       } else {
@@ -409,13 +508,14 @@ class CapnStore {
             <div class="barrel-item-info">
               <span class="barrel-item-sku">${item.sku}</span>
               <h4 class="barrel-item-title">${item.name}</h4>
-              <span class="barrel-item-size">Talla: ${item.size}</span>
+              <span class="barrel-item-size">📏 Talla: <strong>${item.size}</strong></span>
+              <span class="barrel-item-phrase">✍️ "${item.phrase || 'Edición Oficial'}"</span>
               <div class="barrel-item-row">
                 <span class="barrel-item-price">$${(item.price * item.quantity).toFixed(2)}</span>
                 <div class="barrel-stepper">
-                  <button type="button" onclick="window.CapnApp.updateQuantity(${idx}, -1)">-</button>
+                  <button type="button" onclick="window.CapnApp.updateQuantity(${idx}, -1)" title="Disminuir">-</button>
                   <span>${item.quantity}</span>
-                  <button type="button" onclick="window.CapnApp.updateQuantity(${idx}, 1)">+</button>
+                  <button type="button" onclick="window.CapnApp.updateQuantity(${idx}, 1)" title="Aumentar">+</button>
                 </div>
               </div>
             </div>
@@ -459,7 +559,7 @@ class CapnStore {
       }
     }
 
-    // Generar enlace WhatsApp
+    // Generar enlace WhatsApp hacia 0960105825 (593960105825)
     const waCheckoutBtn = document.getElementById("cart-checkout-wa-btn");
     if (waCheckoutBtn) {
       if (this.cart.length === 0) {
@@ -467,22 +567,25 @@ class CapnStore {
         waCheckoutBtn.removeAttribute("href");
       } else {
         waCheckoutBtn.classList.remove("disabled");
-        const lines = this.cart.map(i => `• ${i.name} (Talla: ${i.size}) x${i.quantity} = $${(i.price * i.quantity).toFixed(2)}`).join('\n');
-        const waMsg = encodeURIComponent(
-`🔥 ¡HOLA CAP'N COOK! Quiero hacer mi pedido de gorras desde mySHOUT.US:
+        const lines = this.cart.map((i, idx) => 
+          `${idx + 1}. Gorra: ${i.name} (Talla: ${i.size}) x${i.quantity} = $${(i.price * i.quantity).toFixed(2)}\n   ↳ Frase personalizada: "${i.phrase || 'Edición Oficial'}"`
+        ).join('\n\n');
+
+        const waMsg = `¡Hola! Quiero hacer mi pedido de gorras y frases personalizadas desde Cap'n Cook (mySHOUT.US):
 
 ${lines}
 
-Subtotal: $${subtotal.toFixed(2)}
-${this.discount > 0 ? `Cupón ${this.appliedCoupon}: -$${discountAmt.toFixed(2)}\n` : ''}Total a pagar: $${finalTotal.toFixed(2)}
-Envío: ${subtotal >= threshold ? 'GRATIS VÍA SERVIENTREGA' : '$5.00 Servientrega Nacional'}
+━━━━━━━━━━━━━━━━━━━━
+💰 Subtotal: $${subtotal.toFixed(2)}
+${this.discount > 0 ? `🎟️ Cupón ${this.appliedCoupon}: -$${discountAmt.toFixed(2)}\n` : ''}💵 Total a pagar: $${finalTotal.toFixed(2)}
+🚚 Envío: ${subtotal >= threshold ? 'GRATIS VÍA SERVIENTREGA' : '$5.00 Servientrega Nacional'}
+━━━━━━━━━━━━━━━━━━━━
 
-Mi Ciudad: (Ingresa tu ciudad, ej: Quito / Guayaquil / Cuenca)
-Nombre y Apellido: 
-Cédula: 
-Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`
-        );
-        waCheckoutBtn.href = `https://wa.me/593999999999?text=${waMsg}`;
+📍 Mi Ciudad: (ej: Quito / Guayaquil / Cuenca / Ambato)
+👤 Nombre y Apellido: 
+💳 Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`;
+
+        waCheckoutBtn.href = `https://wa.me/${CAPN_WHATSAPP_PHONE}?text=${encodeURIComponent(waMsg)}`;
       }
     }
   }
@@ -544,14 +647,14 @@ Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`
         this.appliedCoupon = "HEISENBERG (-15%)";
         this.showToast("¡Fórmula de Heisenberg activada! 15% de descuento");
       } else {
-        this.showToast("Cupón inválido o expirado en Nuevo México");
+        this.showToast("Cupón inválido o no reconocido");
       }
       this.updateCartUI();
     };
   }
 
   // ==========================================
-  // MODAL QUICK VIEW
+  // MODAL VISTA RÁPIDA (QUICK VIEW)
   // ==========================================
   openQuickView(productId) {
     const p = CAPN_PRODUCTS.find(item => item.id === productId);
@@ -568,7 +671,7 @@ Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`
           <div class="qv-thumbs-row">
             ${p.images.map((img, idx) => `
               <button class="qv-thumb ${idx === 0 ? 'active' : ''}" onclick="document.getElementById('qv-large-photo').src='${img}'; document.querySelectorAll('.qv-thumb').forEach(b => b.classList.remove('active')); this.classList.add('active');">
-                <img src="${img}" alt="Thumb ${idx + 1}">
+                <img src="${img}" alt="Miniatura ${idx + 1}">
               </button>
             `).join('')}
           </div>
@@ -592,28 +695,86 @@ Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`
             <div><strong>Silueta:</strong> ${p.silhouette} (${p.crownProfile})</div>
             <div><strong>Color Corona:</strong> ${p.crownColor}</div>
             <div><strong>Visera / Base:</strong> ${p.visorColor}</div>
-            <div><strong>Underbrim:</strong> <span><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${p.underbrimHex || '#FFF'}; border:1px solid rgba(255,255,255,0.6); margin-right:5px; vertical-align:middle;"></span>${p.underbrim}</span></div>
-            <div><strong>Bordado / Parche:</strong> ${p.embroidery}</div>
+            <div><strong>Base Visera (Underbrim):</strong> <span><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${p.underbrimHex || '#FFF'}; border:1px solid rgba(255,255,255,0.6); margin-right:5px; vertical-align:middle;"></span>${p.underbrim}</span></div>
+            <div><strong>Bordado:</strong> ${p.embroidery}</div>
             <div><strong>Parche Conmemorativo:</strong> ${p.sidePatch}</div>
             <div><strong>Cierre / Talla:</strong> ${p.closure}</div>
           </div>
 
-          <div class="qv-actions-row">
-            <select id="qv-size-select" class="mini-size-select" style="padding: 12px; font-size: 0.9rem;">
-              <option value="Ajustable (OSFM)">Ajustable (OSFM)</option>
-              <option value="7 (55.8 cm)">7 (55.8 cm)</option>
-              <option value="7 1/8 (56.8 cm)" selected>7 1/8 (56.8 cm) ★</option>
-              <option value="7 1/4 (57.7 cm)">7 1/4 (57.7 cm)</option>
-              <option value="7 3/8 (58.7 cm)">7 3/8 (58.7 cm)</option>
-              <option value="7 1/2 (59.6 cm)">7 1/2 (59.6 cm)</option>
+          <!-- Selector de Frase Personalizada en QuickView -->
+          <div class="qv-phrase-section">
+            <label style="font-size: 0.82rem; font-weight: bold; color: var(--hazmat-yellow); display: block; margin-bottom: 6px;">
+              ✍️ ELIGE TU FRASE PERSONALIZADA (20+ DISPONIBLES):
+            </label>
+            <select id="qv-phrase-select" class="size-select-styled" style="width: 100%; margin-bottom: 8px;">
+              <option value="${p.defaultPhrase}" selected>★ "${p.defaultPhrase}" (Recomendada)</option>
+              ${CAPN_CUSTOM_PHRASES.filter(ph => ph !== p.defaultPhrase).map(ph => `
+                <option value="${ph}">"${ph}"</option>
+              `).join('')}
+              <option value="CUSTOM_WRITE">[Escribir mi propia frase...]</option>
             </select>
-            <button class="btn-primary" onclick="window.CapnApp.addToCart('${p.id}', document.getElementById('qv-size-select').value); window.CapnApp.closeQuickView();">
-              <span>🛒 AGREGAR AL BARRIL</span>
-            </button>
+            <input type="text" id="qv-custom-phrase-input" class="coupon-field" placeholder="Escribe tu frase aquí..." style="display: none; width: 100%; margin-bottom: 12px; background:#111; color:#FFF; border:1px solid var(--hazmat-yellow);">
+          </div>
+
+          <!-- Selector de Talla y Cantidad -->
+          <div class="qv-actions-row">
+            <div style="display: flex; gap: 8px; flex: 1;">
+              <select id="qv-size-select" class="mini-size-select" style="padding: 10px; font-size: 0.85rem; flex: 1;">
+                <option value="Ajustable (OSFM)">Ajustable (OSFM)</option>
+                <option value="7 (55.8 cm)">7 (55.8 cm)</option>
+                <option value="7 1/8 (56.8 cm)" selected>7 1/8 (56.8 cm) ★</option>
+                <option value="7 1/4 (57.7 cm)">7 1/4 (57.7 cm)</option>
+                <option value="7 3/8 (58.7 cm)">7 3/8 (58.7 cm)</option>
+                <option value="7 1/2 (59.6 cm)">7 1/2 (59.6 cm)</option>
+              </select>
+
+              <div class="mini-qty-box" style="height: auto;">
+                <button type="button" class="mini-qty-btn" onclick="const q = document.getElementById('qv-qty-input'); q.value = Math.max(1, (parseInt(q.value,10)||1) - 1);">-</button>
+                <input type="number" id="qv-qty-input" class="mini-qty-input" value="1" min="1" max="10" readonly style="width: 38px;">
+                <button type="button" class="mini-qty-btn" onclick="const q = document.getElementById('qv-qty-input'); q.value = (parseInt(q.value,10)||1) + 1;">+</button>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; width: 100%; margin-top: 10px;">
+              <button class="btn-primary" style="flex: 1;" onclick="
+                const size = document.getElementById('qv-size-select').value;
+                const qty = parseInt(document.getElementById('qv-qty-input').value, 10) || 1;
+                const pSelect = document.getElementById('qv-phrase-select');
+                const cInput = document.getElementById('qv-custom-phrase-input');
+                const phrase = (pSelect.value === 'CUSTOM_WRITE' && cInput.value.trim()) ? cInput.value.trim() : pSelect.value;
+                window.CapnApp.addToCart('${p.id}', size, qty, phrase);
+                window.CapnApp.closeQuickView();
+              ">
+                <span>🛒 AGREGAR AL BARRIL</span>
+              </button>
+
+              <button class="btn-wa-lab" style="flex: 1; padding: 10px;" onclick="
+                const size = document.getElementById('qv-size-select').value;
+                const qty = parseInt(document.getElementById('qv-qty-input').value, 10) || 1;
+                const pSelect = document.getElementById('qv-phrase-select');
+                const cInput = document.getElementById('qv-custom-phrase-input');
+                const phrase = (pSelect.value === 'CUSTOM_WRITE' && cInput.value.trim()) ? cInput.value.trim() : pSelect.value;
+                const total = (${p.price} * qty).toFixed(2);
+                const msg = '¡Hola! Quiero una gorra ${p.name} y una frase personalizada.\\n\\n🧢 Modelo: ${p.name}\\n🧪 Lote: ${p.sku}\\n📏 Talla: ' + size + '\\n🔢 Cantidad: ' + qty + ' unidad(es)\\n✍️ Frase Personalizada: \\\"' + phrase + '\\\"\\n💵 Precio: $${p.price.toFixed(2)} c/u | Total: $' + total + '\\n\\n🚚 Envío: Servientrega Nacional\\n📍 Mi Ciudad: \\n👤 Nombre y Apellido: \\n💳 Forma de pago: [Transferencia / Deuna!]';
+                window.open('https://wa.me/${CAPN_WHATSAPP_PHONE}?text=' + encodeURIComponent(msg), '_blank');
+              ">
+                <span>💬 WHATSAPP DIRECTO</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     `;
+
+    // Dynamic input visibility
+    const pSelect = document.getElementById("qv-phrase-select");
+    const cInput = document.getElementById("qv-custom-phrase-input");
+    if (pSelect && cInput) {
+      pSelect.addEventListener("change", (e) => {
+        cInput.style.display = e.target.value === "CUSTOM_WRITE" ? "block" : "none";
+        if (e.target.value === "CUSTOM_WRITE") cInput.focus();
+      });
+    }
 
     modal.classList.add("open");
   }

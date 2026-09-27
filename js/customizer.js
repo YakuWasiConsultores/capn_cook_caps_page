@@ -1,16 +1,14 @@
 /**
  * CAP'N COOK® // THE COOK LAB ENGINE (REACTIVE AVAILABILITY SYSTEM)
- * Solo muestra las piezas genuinamente disponibles en bodega.
- * Si un color, silueta o franquicia no tiene stock para una combinación,
- * se deshabilita dinámicamente y se adapta a la pieza real en stock.
+ * Personalizador de gorras en vivo con disponibilidad en bodega y selección de frases personalizadas.
  */
 
 class CookLabEngine {
-  constructor(products, config) {
+  constructor(products, config, phrases = []) {
     this.products = products;
     this.config = config;
+    this.phrases = phrases && phrases.length ? phrases : (typeof CAPN_CUSTOM_PHRASES !== 'undefined' ? CAPN_CUSTOM_PHRASES : []);
 
-    // Inicializar con la primera pieza real del catálogo
     const first = this.products[0];
     this.state = {
       silhouette: first.silhouette,
@@ -18,7 +16,8 @@ class CookLabEngine {
       team: "any",
       visorStyle: first.visorType,
       activeImageIdx: 0,
-      activeProduct: first
+      activeProduct: first,
+      selectedQty: 1
     };
 
     if (typeof window !== 'undefined' && window.location && window.location.search) {
@@ -49,26 +48,22 @@ class CookLabEngine {
 
       if (type === "silhouette") {
         this.state.silhouette = val;
-        // Adaptar color si el color actual no existe en esta silueta
         const availableInSil = this.products.filter(p => p.silhouette === val);
         const hasColor = availableInSil.some(p => p.primaryColor === this.state.chemical);
         if (!hasColor && availableInSil.length > 0) {
           this.state.chemical = availableInSil[0].primaryColor;
         }
-        // Adaptar franquicia si la actual no existe en esta silueta
         if (this.state.team !== "any") {
           const hasTeam = availableInSil.some(p => p.team === this.state.team);
           if (!hasTeam) this.state.team = "any";
         }
       } else if (type === "chemical") {
         this.state.chemical = val;
-        // Adaptar silueta si la silueta actual no tiene este color
         const availableInChem = this.products.filter(p => p.primaryColor === val);
         const hasSil = availableInChem.some(p => p.silhouette === this.state.silhouette);
         if (!hasSil && availableInChem.length > 0) {
           this.state.silhouette = availableInChem[0].silhouette;
         }
-        // Adaptar franquicia si no tiene este color
         if (this.state.team !== "any") {
           const hasTeam = availableInChem.some(p => p.team === this.state.team);
           if (!hasTeam) this.state.team = "any";
@@ -97,7 +92,6 @@ class CookLabEngine {
 
         if (teamVal !== "any") {
           const teamProducts = this.products.filter(p => p.team === teamVal);
-          // Si la pieza actual no coincide con el equipo, adaptamos
           const matchesCurrent = teamProducts.some(p => 
             p.silhouette === this.state.silhouette && p.primaryColor === this.state.chemical
           );
@@ -116,7 +110,6 @@ class CookLabEngine {
   syncActiveProduct() {
     this.state.activeImageIdx = 0;
 
-    // Buscar coincidencia exacta
     let matches = this.products.filter(p => 
       p.silhouette === this.state.silhouette && 
       p.primaryColor === this.state.chemical
@@ -128,7 +121,6 @@ class CookLabEngine {
     }
 
     if (matches.length === 0) {
-      // Fallback seguro: encontrar cualquier pieza que comparta silueta o color
       matches = this.products.filter(p => p.silhouette === this.state.silhouette);
       if (matches.length === 0) matches = this.products.filter(p => p.primaryColor === this.state.chemical);
       if (matches.length === 0) matches = [this.products[0]];
@@ -147,7 +139,7 @@ class CookLabEngine {
   renderControlsAvailability() {
     const activeProd = this.state.activeProduct;
 
-    // 1. RENDERIZAR SILUETAS
+    // 1. SILUETAS
     const silContainer = document.getElementById("lab-silhouettes");
     if (silContainer) {
       silContainer.innerHTML = this.config.silhouettes.map(sil => {
@@ -171,8 +163,7 @@ class CookLabEngine {
       }).join('');
     }
 
-    // 2. RENDERIZAR QUÍMICOS (COLORES)
-    // Solo habilitar colores que existen en la silueta actualmente seleccionada
+    // 2. COLORES (QUÍMICOS)
     const chemContainer = document.getElementById("lab-chemicals");
     if (chemContainer) {
       const colorsInSil = this.products
@@ -189,7 +180,7 @@ class CookLabEngine {
                   class="lab-chem-pill ${isCurrent ? 'active' : ''} ${!isAvailable ? 'disabled' : ''}" 
                   data-type="chemical" 
                   data-val="${c.id}"
-                  title="${isAvailable ? `${count} pieza(s) en este corte` : 'No disponible en este corte'}"
+                  title="${isAvailable ? `${count} pieza(s) en stock` : 'No disponible en esta silueta'}"
                   ${!isAvailable ? 'disabled' : ''}>
             <span class="chem-dot" style="background-color: ${c.hex};"></span>
             <span class="chem-label">${c.name}</span>
@@ -199,7 +190,7 @@ class CookLabEngine {
       }).join('');
     }
 
-    // 3. RENDERIZAR FRANQUICIAS
+    // 3. FRANQUICIAS
     const teamSelect = document.getElementById("lab-team-select");
     if (teamSelect) {
       const teamsInSilAndChem = this.products
@@ -214,13 +205,13 @@ class CookLabEngine {
         const isSelected = activeProd.team === t.id;
         return `
           <option value="${t.id}" ${isSelected ? 'selected' : ''} ${!isAvail ? 'disabled style="color:#666;"' : ''}>
-            ${t.icon} ${t.name} ${isAvail ? '✓ [EN BODEGA]' : '[NO DISPONIBLE EN ESTE CORTE/COLOR]'}
+            ${t.icon} ${t.name} ${isAvail ? '✓ [EN BODEGA]' : '[NO DISPONIBLE EN ESTE COLOR]'}
           </option>
         `;
       }).join('');
     }
 
-    // 4. RENDERIZAR ESTILO DE VISERA
+    // 4. ESTILOS DE VISERA
     const visorContainer = document.getElementById("lab-visor-styles");
     if (visorContainer) {
       visorContainer.innerHTML = this.config.visorStyles.map(v => {
@@ -239,7 +230,6 @@ class CookLabEngine {
   }
 
   renderLabStage(prod) {
-    // 1. Imagen del laboratorio
     const mainImg = document.getElementById("lab-main-photo");
     const thumbsBox = document.getElementById("lab-photo-thumbs");
 
@@ -268,7 +258,6 @@ class CookLabEngine {
       });
     }
 
-    // 2. Datos y Especificaciones de la Cocina
     const titleEl = document.getElementById("lab-prod-title");
     const skuEl = document.getElementById("lab-prod-sku");
     const purityValEl = document.getElementById("lab-purity-val");
@@ -302,14 +291,14 @@ class CookLabEngine {
 
     if (stockEl) {
       stockEl.innerHTML = prod.stock <= 2
-        ? `<span class="stock-warn">⚠️ QUEDAN SOLO ${prod.stock} UNIDADES EN LA BODEGA DE ALBUQUERQUE (ECUADOR)</span>`
+        ? `<span class="stock-warn">⚠️ QUEDAN SOLO ${prod.stock} UNIDADES EN BODEGA ECUADOR</span>`
         : `<span class="stock-ok">✓ DISPONIBLE EN EL BÚNKER DE SERVIENTREGA (${prod.stock} UNIDADES)</span>`;
     }
 
     if (descEl) descEl.textContent = prod.description;
     if (loreEl) loreEl.innerHTML = `<span class="quote-icon">❝</span> ${prod.loreQuote}`;
 
-    // FÓRMULA CROMÁTICA REAL AUDITADA + FICHA TÉCNICA
+    // FÓRMULA CROMÁTICA REAL Y FICHA TÉCNICA
     if (specsEl) {
       specsEl.innerHTML = `
         <div class="lab-advisory-banner pure">
@@ -339,7 +328,7 @@ class CookLabEngine {
             <div class="chroma-cell chroma-cell-full">
               <span class="chroma-chip" style="background: ${prod.embroideryHex || '#FFF'};"></span>
               <div>
-                <span class="chroma-label">BORDADO / PARCHE</span>
+                <span class="chroma-label">BORDADO / LOGO</span>
                 <span class="chroma-val">${prod.embroidery}</span>
               </div>
             </div>
@@ -352,7 +341,7 @@ class CookLabEngine {
             <span class="cell-v">${prod.crownProfile}</span>
           </div>
           <div class="spec-cell">
-            <span class="cell-k">UNDERBRIM (BASE VISERA)</span>
+            <span class="cell-k">BASE DE VISERA</span>
             <span class="cell-v"><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${prod.underbrimHex || '#FFF'}; border:1px solid rgba(255,255,255,0.6); margin-right:6px; vertical-align:middle;"></span>${prod.underbrim}</span>
           </div>
           <div class="spec-cell">
@@ -364,30 +353,85 @@ class CookLabEngine {
             <span class="cell-v">${prod.sidePatch}</span>
           </div>
         </div>
+
+        <!-- Módulo de Frases Personalizadas en el Laboratorio -->
+        <div class="lab-phrase-wrapper" style="margin-top: 14px; background: rgba(0,0,0,0.4); border: 1px dashed var(--hazmat-yellow); padding: 12px; border-radius: 4px;">
+          <label style="font-size: 0.8rem; font-weight: bold; color: var(--hazmat-yellow); display: block; margin-bottom: 6px;">
+            ✍️ 05 // ELIGE TU FRASE PERSONALIZADA (20+ DISPONIBLES):
+          </label>
+          <select id="lab-phrase-select" class="size-select-styled" style="width: 100%; margin-bottom: 6px;">
+            <option value="${prod.defaultPhrase}" selected>★ "${prod.defaultPhrase}" (Recomendada)</option>
+            ${this.phrases.filter(ph => ph !== prod.defaultPhrase).map(ph => `
+              <option value="${ph}">"${ph}"</option>
+            `).join('')}
+            <option value="CUSTOM_WRITE">[Escribir mi propia frase personalizada...]</option>
+          </select>
+          <input type="text" id="lab-custom-phrase-input" class="coupon-field" placeholder="Escribe tu frase aquí..." style="display: none; width: 100%; margin-bottom: 6px; background:#111; color:#FFF; border:1px solid var(--hazmat-yellow);">
+        </div>
       `;
+
+      // Escuchar cambios en la frase del lab
+      const pSelect = document.getElementById("lab-phrase-select");
+      const cInput = document.getElementById("lab-custom-phrase-input");
+      if (pSelect && cInput) {
+        pSelect.addEventListener("change", (e) => {
+          cInput.style.display = e.target.value === "CUSTOM_WRITE" ? "block" : "none";
+          if (e.target.value === "CUSTOM_WRITE") cInput.focus();
+        });
+      }
     }
 
-    // Botones de acción
+    // Botones de acción del laboratorio
     if (addCartBtn) {
       addCartBtn.onclick = () => {
         const sizeSelect = document.getElementById("lab-size-select");
         const chosenSize = sizeSelect ? sizeSelect.value : "Ajustable";
-        window.CapnApp?.addToCart(prod.id, chosenSize);
+        const qtyInput = document.getElementById("lab-qty-input");
+        const qty = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
+
+        const pSelect = document.getElementById("lab-phrase-select");
+        const cInput = document.getElementById("lab-custom-phrase-input");
+        const phrase = (pSelect && pSelect.value === "CUSTOM_WRITE" && cInput && cInput.value.trim()) 
+          ? cInput.value.trim() 
+          : (pSelect ? pSelect.value : prod.defaultPhrase);
+
+        window.CapnApp?.addToCart(prod.id, chosenSize, qty, phrase);
       };
     }
 
     if (waBtn) {
-      const sizeSelect = document.getElementById("lab-size-select");
-      const chosenSize = sizeSelect ? sizeSelect.value : "Ajustable";
-      const msg = encodeURIComponent(`Hola Cap'n Cook! Vengo de mySHOUT.US y quiero ordenar mi gorra:
-- Lote ID: ${prod.catalogId} (${prod.sku})
-- Pieza: ${prod.name}
-- Silueta: ${prod.silhouette}
-- Color auditado: ${prod.crownColor}
-- Talla: ${chosenSize}
-- Precio: $${prod.price.toFixed(2)}
-¿Está lista para despacho en Ecuador vía Servientrega?`);
-      waBtn.href = `https://wa.me/593999999999?text=${msg}`;
+      waBtn.onclick = (e) => {
+        e.preventDefault();
+        const sizeSelect = document.getElementById("lab-size-select");
+        const chosenSize = sizeSelect ? sizeSelect.value : "Ajustable";
+        const qtyInput = document.getElementById("lab-qty-input");
+        const qty = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
+
+        const pSelect = document.getElementById("lab-phrase-select");
+        const cInput = document.getElementById("lab-custom-phrase-input");
+        const phrase = (pSelect && pSelect.value === "CUSTOM_WRITE" && cInput && cInput.value.trim()) 
+          ? cInput.value.trim() 
+          : (pSelect ? pSelect.value : prod.defaultPhrase);
+
+        const total = (prod.price * qty).toFixed(2);
+        const msg = `¡Hola! Quiero una gorra ${prod.name} y una frase personalizada.
+
+🧢 Modelo: ${prod.name}
+🧪 Lote: ${prod.catalogId} (${prod.sku})
+📐 Silueta: ${prod.silhouette}
+🎨 Color auditado: ${prod.crownColor}
+📏 Talla: ${chosenSize}
+🔢 Cantidad: ${qty} unidad(es)
+✍️ Frase Personalizada: "${phrase}"
+💵 Precio unitario: $${prod.price.toFixed(2)} | Total: $${total}
+
+🚚 Envío: Servientrega a todo Ecuador
+📍 Mi Ciudad: (ej: Quito / Guayaquil / Cuenca / etc.)
+👤 Nombre y Apellido: 
+💳 Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`;
+
+        window.open(`https://wa.me/593960105825?text=${encodeURIComponent(msg)}`, "_blank");
+      };
     }
   }
 }

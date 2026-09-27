@@ -2269,6 +2269,218 @@ body {
 }
 
 /* ==========================================================================
+   SELECTORES DE FRASES PERSONALIZADAS & CANTIDADES MULTIPLES
+   ========================================================================== */
+.card-phrase-box {
+  margin: 10px 0;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px dashed rgba(255, 222, 0, 0.4);
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+}
+
+.card-phrase-lbl {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--hazmat-yellow);
+  margin-bottom: 4px;
+}
+
+.card-phrase-select {
+  width: 100%;
+  background: #0E1017;
+  color: #FFF;
+  border: 1px solid var(--border-light);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 6px 8px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.card-phrase-select:focus {
+  border-color: var(--hazmat-yellow);
+}
+
+.card-phrase-custom-input {
+  width: 100%;
+  margin-top: 6px;
+  background: #000;
+  color: #FFF;
+  border: 1px solid var(--hazmat-yellow);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 3px;
+  outline: none;
+}
+
+.card-actions-unified {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.card-controls-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mini-size-select {
+  flex: 1.5;
+  background: #11141E;
+  color: #FFF;
+  border: 1px solid var(--border-light);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.mini-qty-box {
+  display: inline-flex;
+  align-items: center;
+  background: #0B0C10;
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.mini-qty-btn {
+  background: #181A24;
+  color: var(--hazmat-yellow);
+  border: none;
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: 0.85rem;
+  width: 26px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.mini-qty-btn:hover {
+  background: var(--hazmat-yellow);
+  color: #000;
+}
+
+.mini-qty-input {
+  width: 32px;
+  height: 30px;
+  background: transparent;
+  color: #FFF;
+  border: none;
+  font-family: var(--font-mono);
+  font-weight: bold;
+  font-size: 0.8rem;
+  text-align: center;
+  outline: none;
+}
+
+.card-buttons-row {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-card-add-full {
+  flex: 1;
+  background: var(--hazmat-yellow);
+  color: #000;
+  border: none;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 8px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: var(--transition);
+}
+
+.btn-card-add-full:hover {
+  background: #FFF;
+  transform: translateY(-1px);
+}
+
+.btn-card-wa-direct {
+  flex: 1;
+  background: #25D366;
+  color: #FFF;
+  border: none;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 8px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: var(--transition);
+}
+
+.btn-card-wa-direct:hover {
+  background: #1EBE5D;
+  transform: translateY(-1px);
+}
+
+.barrel-item-phrase {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--hazmat-yellow);
+  font-style: italic;
+  margin: 3px 0;
+  line-height: 1.3;
+}
+
+.barrel-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+  background: #0B0C10;
+}
+
+.barrel-stepper button {
+  background: #181A24;
+  color: var(--hazmat-yellow);
+  border: none;
+  width: 24px;
+  height: 24px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.barrel-stepper button:hover {
+  background: var(--hazmat-yellow);
+  color: #000;
+}
+
+.barrel-stepper span {
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #FFF;
+  font-weight: bold;
+}
+
+/* ==========================================================================
    RESPONSIVE DESIGN
    ========================================================================== */
 @media (max-width: 1024px) {
