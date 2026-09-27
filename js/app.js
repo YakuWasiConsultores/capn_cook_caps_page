@@ -2,6 +2,7 @@
  * CAP'N COOK® // MAIN APP, CART STORE & WHATSAPP CHECKOUT ENGINE
  * Número oficial de pedidos: 0960105825 (+593960105825)
  * Soporte para cantidades múltiples, selector de 20+ frases personalizadas y mensajes directos del comprador al vendedor.
+ * Las frases personalizadas se colocan limpiamente al final del mensaje como firma/cita.
  */
 
 const CAPN_WHATSAPP_PHONE = "593960105825";
@@ -293,7 +294,6 @@ class CapnStore {
       </article>
     `).join('');
 
-    // Listener para input de frase personalizada
     items.forEach(p => {
       const select = document.getElementById(`phrase-${p.id}`);
       const customInput = document.getElementById(`phrase-custom-${p.id}`);
@@ -404,15 +404,15 @@ class CapnStore {
     const phrase = this.getChosenPhrase(productId);
     const total = (p.price * qty).toFixed(2);
 
-    const msg = `¡Hola! Quiero una gorra ${p.name} y una frase personalizada.
+    const msg = `¡Hola! Quiero una gorra ${p.name}.
 
-• Gorra: ${p.name}
 • Talla: ${size}
 • Cantidad: ${qty} unidad(es)
-• Frase personalizada: "${phrase}"
 • Total estimado: $${total}
 
-¿Me confirmas disponibilidad y cómo realizar el pago por favor?`;
+¿Me confirmas disponibilidad y cómo realizar el pago por favor?
+
+"${phrase}"`;
 
     window.open(`https://wa.me/${CAPN_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, "_blank");
   }
@@ -553,7 +553,7 @@ class CapnStore {
       }
     }
 
-    // Generar enlace WhatsApp hacia 0960105825 (593960105825) escrito por el comprador hacia el vendedor
+    // Generar enlace WhatsApp hacia 0960105825 (593960105825) con las frases al final
     const waCheckoutBtn = document.getElementById("cart-checkout-wa-btn");
     if (waCheckoutBtn) {
       if (this.cart.length === 0) {
@@ -562,16 +562,24 @@ class CapnStore {
       } else {
         waCheckoutBtn.classList.remove("disabled");
         const lines = this.cart.map((i, idx) => 
-          `${idx + 1}. Gorra: ${i.name} (Talla: ${i.size}) x${i.quantity} = $${(i.price * i.quantity).toFixed(2)}\n   Frase personalizada: "${i.phrase || 'Edición Oficial'}"`
-        ).join('\n\n');
+          `${idx + 1}. ${i.name} (Talla: ${i.size}) x${i.quantity} = $${(i.price * i.quantity).toFixed(2)}`
+        ).join('\n');
 
-        const waMsg = `¡Hola! Quiero hacer un pedido de las siguientes gorras con sus frases personalizadas:
+        const phrasesList = this.cart
+          .map(i => i.phrase)
+          .filter((ph, index, self) => ph && self.indexOf(ph) === index)
+          .map(ph => `"${ph}"`)
+          .join('\n');
+
+        const waMsg = `¡Hola! Quiero hacer un pedido de las siguientes gorras:
 
 ${lines}
 
 Total a pagar: $${finalTotal.toFixed(2)}
 
-¿Me podrían confirmar la disponibilidad y los datos para realizar el pago y coordinar el envío por favor? Muchas gracias.`;
+¿Me podrían confirmar la disponibilidad y los datos para realizar el pago y coordinar el envío por favor? Muchas gracias.
+
+${phrasesList}`;
 
         waCheckoutBtn.href = `https://wa.me/${CAPN_WHATSAPP_PHONE}?text=${encodeURIComponent(waMsg)}`;
       }
@@ -692,7 +700,7 @@ Total a pagar: $${finalTotal.toFixed(2)}
           <!-- Selector de Frase Personalizada en QuickView -->
           <div class="qv-phrase-section">
             <label style="font-size: 0.82rem; font-weight: bold; color: var(--hazmat-yellow); display: block; margin-bottom: 6px;">
-              ✍️ ELIGE TU FRASE PERSONALIZADA (20+ DISPONIBLES):
+              ✍️ ELIGE TU FRASE PERSONALIZADA:
             </label>
             <select id="qv-phrase-select" class="size-select-styled" style="width: 100%; margin-bottom: 8px;">
               <option value="${p.defaultPhrase}" selected>★ "${p.defaultPhrase}" (Recomendada)</option>
@@ -743,7 +751,7 @@ Total a pagar: $${finalTotal.toFixed(2)}
                 const cInput = document.getElementById('qv-custom-phrase-input');
                 const phrase = (pSelect.value === 'CUSTOM_WRITE' && cInput.value.trim()) ? cInput.value.trim() : pSelect.value;
                 const total = (${p.price} * qty).toFixed(2);
-                const msg = '¡Hola! Quiero una gorra ${p.name} y una frase personalizada.\\n\\n• Gorra: ${p.name}\\n• Talla: ' + size + '\\n• Cantidad: ' + qty + ' unidad(es)\\n• Frase personalizada: \\\"' + phrase + '\\\"\\n• Total estimado: $' + total + '\\n\\n¿Me confirmas disponibilidad y los datos para realizar el pago por favor?';
+                const msg = '¡Hola! Quiero una gorra ${p.name}.\\n\\n• Talla: ' + size + '\\n• Cantidad: ' + qty + ' unidad(es)\\n• Total estimado: $' + total + '\\n\\n¿Me confirmas disponibilidad y los datos para realizar el pago por favor?\\n\\n\\\"' + phrase + '\\\"';
                 window.open('https://wa.me/${CAPN_WHATSAPP_PHONE}?text=' + encodeURIComponent(msg), '_blank');
               ">
                 <span>💬 PEDIR POR WHATSAPP</span>

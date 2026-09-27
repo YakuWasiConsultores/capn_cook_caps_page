@@ -1,6 +1,6 @@
 /**
  * CAP'N COOK® // THE COOK LAB ENGINE (REACTIVE AVAILABILITY SYSTEM)
- * Personalizador de gorras en vivo con disponibilidad en bodega y selección de frases personalizadas.
+ * Personalizador de gorras en vivo con disponibilidad en bodega y frase como firma al final del mensaje.
  */
 
 class CookLabEngine {
@@ -298,7 +298,6 @@ class CookLabEngine {
     if (descEl) descEl.textContent = prod.description;
     if (loreEl) loreEl.innerHTML = `<span class="quote-icon">❝</span> ${prod.loreQuote}`;
 
-    // FÓRMULA CROMÁTICA REAL Y FICHA TÉCNICA
     if (specsEl) {
       specsEl.innerHTML = `
         <div class="lab-advisory-banner pure">
@@ -354,10 +353,10 @@ class CookLabEngine {
           </div>
         </div>
 
-        <!-- Módulo de Frases Personalizadas en el Laboratorio -->
+        <!-- Módulo de Frases en el Laboratorio -->
         <div class="lab-phrase-wrapper" style="margin-top: 14px; background: rgba(0,0,0,0.4); border: 1px dashed var(--hazmat-yellow); padding: 12px; border-radius: 4px;">
           <label style="font-size: 0.8rem; font-weight: bold; color: var(--hazmat-yellow); display: block; margin-bottom: 6px;">
-            ✍️ 05 // ELIGE TU FRASE PERSONALIZADA (20+ DISPONIBLES):
+            ✍️ 05 // ELIGE TU FRASE PERSONALIZADA:
           </label>
           <select id="lab-phrase-select" class="size-select-styled" style="width: 100%; margin-bottom: 6px;">
             <option value="${prod.defaultPhrase}" selected>★ "${prod.defaultPhrase}" (Recomendada)</option>
@@ -413,16 +412,16 @@ class CookLabEngine {
           : (pSelect ? pSelect.value : prod.defaultPhrase);
 
         const total = (prod.price * qty).toFixed(2);
-        const msg = `¡Hola! Quiero una gorra ${prod.name} y una frase personalizada.
+        const msg = `¡Hola! Quiero una gorra ${prod.name}.
 
-• Gorra: ${prod.name}
 • Silueta: ${prod.silhouette}
 • Talla: ${chosenSize}
 • Cantidad: ${qty} unidad(es)
-• Frase personalizada: "${phrase}"
 • Total estimado: $${total}
 
-¿Me confirman si la tienen disponible y los datos para realizar el pago por favor? Muchas gracias.`;
+¿Me confirman si la tienen disponible y los datos para realizar el pago por favor?
+
+"${phrase}"`;
 
         window.open(`https://wa.me/593960105825?text=${encodeURIComponent(msg)}`, "_blank");
       };
