@@ -370,7 +370,6 @@ class CookLabEngine {
         </div>
       `;
 
-      // Escuchar cambios en la frase del lab
       const pSelect = document.getElementById("lab-phrase-select");
       const cInput = document.getElementById("lab-custom-phrase-input");
       if (pSelect && cInput) {
@@ -416,19 +415,14 @@ class CookLabEngine {
         const total = (prod.price * qty).toFixed(2);
         const msg = `¡Hola! Quiero una gorra ${prod.name} y una frase personalizada.
 
-🧢 Modelo: ${prod.name}
-🧪 Lote: ${prod.catalogId} (${prod.sku})
-📐 Silueta: ${prod.silhouette}
-🎨 Color auditado: ${prod.crownColor}
-📏 Talla: ${chosenSize}
-🔢 Cantidad: ${qty} unidad(es)
-✍️ Frase Personalizada: "${phrase}"
-💵 Precio unitario: $${prod.price.toFixed(2)} | Total: $${total}
+• Gorra: ${prod.name}
+• Silueta: ${prod.silhouette}
+• Talla: ${chosenSize}
+• Cantidad: ${qty} unidad(es)
+• Frase personalizada: "${phrase}"
+• Total estimado: $${total}
 
-🚚 Envío: Servientrega a todo Ecuador
-📍 Mi Ciudad: (ej: Quito / Guayaquil / Cuenca / etc.)
-👤 Nombre y Apellido: 
-💳 Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`;
+¿Me confirman si la tienen disponible y los datos para realizar el pago por favor? Muchas gracias.`;
 
         window.open(`https://wa.me/593960105825?text=${encodeURIComponent(msg)}`, "_blank");
       };

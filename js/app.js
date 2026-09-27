@@ -1,7 +1,7 @@
 /**
  * CAP'N COOK® // MAIN APP, CART STORE & WHATSAPP CHECKOUT ENGINE
  * Número oficial de pedidos: 0960105825 (+593960105825)
- * Soporte para cantidades múltiples, selector de 20+ frases personalizadas y checkout interactivo.
+ * Soporte para cantidades múltiples, selector de 20+ frases personalizadas y mensajes directos del comprador al vendedor.
  */
 
 const CAPN_WHATSAPP_PHONE = "593960105825";
@@ -47,7 +47,6 @@ class CapnStore {
       if (waveEl) waveEl.style.display = "none";
     });
 
-    // Reproducción automática a los 3 segundos
     setTimeout(() => {
       this.triggerVoicemailPlayback();
     }, 3000);
@@ -125,7 +124,7 @@ class CapnStore {
         btn.innerHTML = `<span>⏸️ PAUSAR MENSAJE (JESSE)</span>`;
       } else {
         btn.classList.remove("playing");
-        btn.innerHTML = `<span>📞 ESCUCHAR CONTESTADOR DE JESSE</span>`;
+        btn.innerHTML = `<span>📞 CONTESTADOR DE JESSE</span>`;
       }
     });
   }
@@ -144,7 +143,7 @@ class CapnStore {
         <span style="font-size:1.4rem; animation: pulse 0.8s infinite;">📞</span>
         <div>
           <strong style="color:var(--hazmat-yellow); display:block; font-size:0.85rem;">MENSAJE DE VOZ DE JESSE PINKMAN:</strong>
-          <span style="font-size:0.75rem; color:#FFF;">"¿Qué hay de nuevo perr4? 148-3 to the 3 to the 6 to the 9, representando el ABQ, what up, biatch?! Deja tu mensaje al tono..."</span>
+          <span style="font-size:0.75rem; color:#FFF;">"¿Qué hay de nuevo? 148-3 to the 3 to the 6 to the 9, representando el ABQ. Deja tu mensaje al tono..."</span>
         </div>
       </div>
     `;
@@ -407,17 +406,13 @@ class CapnStore {
 
     const msg = `¡Hola! Quiero una gorra ${p.name} y una frase personalizada.
 
-🧢 Modelo: ${p.name}
-🧪 Lote: ${p.sku} // ${p.silhouette}
-📏 Talla: ${size}
-🔢 Cantidad: ${qty} unidad(es)
-✍️ Frase Personalizada: "${phrase}"
-💵 Precio: $${p.price.toFixed(2)} c/u | Total: $${total}
+• Gorra: ${p.name}
+• Talla: ${size}
+• Cantidad: ${qty} unidad(es)
+• Frase personalizada: "${phrase}"
+• Total estimado: $${total}
 
-🚚 Envío: Servientrega a todo Ecuador
-📍 Mi Ciudad: (ej: Quito / Guayaquil / Cuenca)
-👤 Nombre y Apellido: 
-💳 Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`;
+¿Me confirmas disponibilidad y cómo realizar el pago por favor?`;
 
     window.open(`https://wa.me/${CAPN_WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, "_blank");
   }
@@ -431,7 +426,6 @@ class CapnStore {
 
     const chosenPhrase = phrase || product.defaultPhrase || "99.1% Pureza Krystal";
 
-    // Buscar si ya existe la misma gorra con la misma talla Y la misma frase
     const existingIndex = this.cart.findIndex(i => i.id === productId && i.size === size && i.phrase === chosenPhrase);
     if (existingIndex > -1) {
       this.cart[existingIndex].quantity += quantity;
@@ -498,7 +492,7 @@ class CapnStore {
           <div class="empty-barrel-box">
             <span style="font-size: 3rem;">🛢️</span>
             <h4>TU BARRIL DE DINERO ESTÁ VACÍO</h4>
-            <p>Añade una gorra al lote antes de que la DEA se entere.</p>
+            <p>Añade una gorra al lote antes de que se agote el stock.</p>
           </div>
         `;
       } else {
@@ -559,7 +553,7 @@ class CapnStore {
       }
     }
 
-    // Generar enlace WhatsApp hacia 0960105825 (593960105825)
+    // Generar enlace WhatsApp hacia 0960105825 (593960105825) escrito por el comprador hacia el vendedor
     const waCheckoutBtn = document.getElementById("cart-checkout-wa-btn");
     if (waCheckoutBtn) {
       if (this.cart.length === 0) {
@@ -568,22 +562,16 @@ class CapnStore {
       } else {
         waCheckoutBtn.classList.remove("disabled");
         const lines = this.cart.map((i, idx) => 
-          `${idx + 1}. Gorra: ${i.name} (Talla: ${i.size}) x${i.quantity} = $${(i.price * i.quantity).toFixed(2)}\n   ↳ Frase personalizada: "${i.phrase || 'Edición Oficial'}"`
+          `${idx + 1}. Gorra: ${i.name} (Talla: ${i.size}) x${i.quantity} = $${(i.price * i.quantity).toFixed(2)}\n   Frase personalizada: "${i.phrase || 'Edición Oficial'}"`
         ).join('\n\n');
 
-        const waMsg = `¡Hola! Quiero hacer mi pedido de gorras y frases personalizadas desde Cap'n Cook (mySHOUT.US):
+        const waMsg = `¡Hola! Quiero hacer un pedido de las siguientes gorras con sus frases personalizadas:
 
 ${lines}
 
-━━━━━━━━━━━━━━━━━━━━
-💰 Subtotal: $${subtotal.toFixed(2)}
-${this.discount > 0 ? `🎟️ Cupón ${this.appliedCoupon}: -$${discountAmt.toFixed(2)}\n` : ''}💵 Total a pagar: $${finalTotal.toFixed(2)}
-🚚 Envío: ${subtotal >= threshold ? 'GRATIS VÍA SERVIENTREGA' : '$5.00 Servientrega Nacional'}
-━━━━━━━━━━━━━━━━━━━━
+Total a pagar: $${finalTotal.toFixed(2)}
 
-📍 Mi Ciudad: (ej: Quito / Guayaquil / Cuenca / Ambato)
-👤 Nombre y Apellido: 
-💳 Forma de pago: [Transferencia Banco Pichincha / Deuna! / Efectivo]`;
+¿Me podrían confirmar la disponibilidad y los datos para realizar el pago y coordinar el envío por favor? Muchas gracias.`;
 
         waCheckoutBtn.href = `https://wa.me/${CAPN_WHATSAPP_PHONE}?text=${encodeURIComponent(waMsg)}`;
       }
@@ -755,10 +743,10 @@ ${this.discount > 0 ? `🎟️ Cupón ${this.appliedCoupon}: -$${discountAmt.toF
                 const cInput = document.getElementById('qv-custom-phrase-input');
                 const phrase = (pSelect.value === 'CUSTOM_WRITE' && cInput.value.trim()) ? cInput.value.trim() : pSelect.value;
                 const total = (${p.price} * qty).toFixed(2);
-                const msg = '¡Hola! Quiero una gorra ${p.name} y una frase personalizada.\\n\\n🧢 Modelo: ${p.name}\\n🧪 Lote: ${p.sku}\\n📏 Talla: ' + size + '\\n🔢 Cantidad: ' + qty + ' unidad(es)\\n✍️ Frase Personalizada: \\\"' + phrase + '\\\"\\n💵 Precio: $${p.price.toFixed(2)} c/u | Total: $' + total + '\\n\\n🚚 Envío: Servientrega Nacional\\n📍 Mi Ciudad: \\n👤 Nombre y Apellido: \\n💳 Forma de pago: [Transferencia / Deuna!]';
+                const msg = '¡Hola! Quiero una gorra ${p.name} y una frase personalizada.\\n\\n• Gorra: ${p.name}\\n• Talla: ' + size + '\\n• Cantidad: ' + qty + ' unidad(es)\\n• Frase personalizada: \\\"' + phrase + '\\\"\\n• Total estimado: $' + total + '\\n\\n¿Me confirmas disponibilidad y los datos para realizar el pago por favor?';
                 window.open('https://wa.me/${CAPN_WHATSAPP_PHONE}?text=' + encodeURIComponent(msg), '_blank');
               ">
-                <span>💬 WHATSAPP DIRECTO</span>
+                <span>💬 PEDIR POR WHATSAPP</span>
               </button>
             </div>
           </div>
@@ -766,7 +754,6 @@ ${this.discount > 0 ? `🎟️ Cupón ${this.appliedCoupon}: -$${discountAmt.toF
       </div>
     `;
 
-    // Dynamic input visibility
     const pSelect = document.getElementById("qv-phrase-select");
     const cInput = document.getElementById("qv-custom-phrase-input");
     if (pSelect && cInput) {
