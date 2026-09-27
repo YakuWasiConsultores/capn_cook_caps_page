@@ -1,0 +1,21 @@
+# Python / Cache
+__pycache__/
+*.py[cod]
+*.py
+
+# Scrapers y scripts de construccion
+download_*.js
+scrape_*.py
+build_*.py
+export_*.py
+
+# Bases de datos y hojas de calculo
+*.db
+*.sqlite3
+*.xlsx
+
+# Capturas de pantalla y temporales
+screenshot_*.png
+sticker_*.png
+.DS_Store
+Thumbs.db
