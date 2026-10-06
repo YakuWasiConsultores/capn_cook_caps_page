@@ -1,21 +1,33 @@
 # Python / Cache
 __pycache__/
 *.py[cod]
-*.py
 
-# Scrapers y scripts de construccion
+# Scripts auxiliares y scrapers (excluidos de producción)
 download_*.js
 scrape_*.py
 build_*.py
 export_*.py
+test_*.py
 
-# Bases de datos y hojas de calculo
+# Permitir servidor de producción
+!server.py
+
+# Bases de datos: permitir inventario para producción
 *.db
 *.sqlite3
-*.xlsx
+!capn_cook_inventory.db
 
-# Capturas de pantalla y temporales
+# Credenciales y variables de entorno (NUNCA SUBIR)
+.env
+*.env
+*.key
+*.pem
+
+# Archivos de oficina y temporales
+*.docx
+*.xlsx
 screenshot_*.png
 sticker_*.png
+test_*.png
 .DS_Store
 Thumbs.db

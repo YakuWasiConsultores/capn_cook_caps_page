@@ -582,6 +582,27 @@ Total a pagar: $${finalTotal.toFixed(2)}
 ${phrasesList}`;
 
         waCheckoutBtn.href = `https://wa.me/${CAPN_WHATSAPP_PHONE}?text=${encodeURIComponent(waMsg)}`;
+        
+        // Sincronización automática de stock con la base de datos SQLite
+        waCheckoutBtn.onclick = async () => {
+          const apiBase = window.location.origin.startsWith("http") ? "" : "http://localhost:8080";
+          for (const item of this.cart) {
+            try {
+              await fetch(`${apiBase}/api/comprar`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: item.id,
+                  cantidad: item.quantity,
+                  cliente: "Cliente El Barril",
+                  metodo: "WhatsApp 0960105825"
+                })
+              });
+            } catch (err) {
+              console.warn("Servidor local no disponible para sync de BD:", err);
+            }
+          }
+        };
       }
     }
   }
@@ -782,4 +803,5 @@ ${phrasesList}`;
 // Inicialización global al cargar DOM
 document.addEventListener("DOMContentLoaded", () => {
   window.CapnApp = new CapnStore();
+  window.capnApp = window.CapnApp;
 });

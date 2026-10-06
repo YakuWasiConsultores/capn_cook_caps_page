@@ -1,0 +1,2 @@
+# Cap'n Cook Cap Store Backend
+# Utiliza librerías estándar nativas de Python (http.server, socketserver, sqlite3, urllib, json)
