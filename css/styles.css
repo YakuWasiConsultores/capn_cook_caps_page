@@ -2529,6 +2529,37 @@ body {
   .barrel-drawer {
     max-width: 100%;
   }
+
+  .jesse-chat-window {
+    width: calc(100vw - 32px);
+    height: 72vh;
+    bottom: 68px;
+    right: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .jesse-chat-wrapper {
+    bottom: 12px;
+    right: 12px;
+  }
+
+  .jesse-chat-window {
+    width: calc(100vw - 24px);
+    height: 80vh;
+    max-height: calc(100vh - 80px);
+    bottom: 60px;
+    right: 0;
+  }
+
+  .launcher-text-box {
+    display: none;
+  }
+
+  .jesse-launcher-btn {
+    padding: 6px;
+    border-radius: 50%;
+  }
 }
 
 /* ==========================================================================

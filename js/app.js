@@ -23,6 +23,7 @@ class CapnStore {
   init() {
     this.renderCatalog(CAPN_PRODUCTS);
     this.bindCatalogFilters();
+    this.bindHeaderSearch();
     this.bindCartDrawer();
     this.bindPromoCode();
     this.updateCartUI();
@@ -224,8 +225,8 @@ class CapnStore {
         </div>
 
         <div class="card-img-stage" onclick="window.CapnApp.openQuickView('${p.id}')">
-          <img src="${p.images[0]}" alt="${p.name}" class="img-main">
-          ${p.images[1] ? `<img src="${p.images[1]}" alt="${p.name} vista lateral" class="img-side">` : ''}
+          <img src="${p.images[0]}" alt="${p.name}" class="img-main" loading="lazy" decoding="async">
+          ${p.images[1] ? `<img src="${p.images[1]}" alt="${p.name} vista lateral" class="img-side" loading="lazy" decoding="async">` : ''}
           <button class="quick-view-badge" title="Vista Rápida">👁️ VISTA DETALLADA</button>
         </div>
 
@@ -347,6 +348,50 @@ class CapnStore {
         const activeCat = document.querySelector(".filter-tag-btn.active")?.dataset.category || "all";
         const searchVal = (document.getElementById("catalog-search-input")?.value || "").toLowerCase().trim();
         this.filterAndSortCatalog(activeCat, searchVal);
+      });
+    }
+  }
+
+  bindHeaderSearch() {
+    const headerInput = document.querySelector(".myshout-search-box");
+    const headerBtn = document.querySelector(".myshout-search-btn");
+    if (!headerInput) return;
+
+    const executeSearch = () => {
+      const q = headerInput.value.trim().toLowerCase();
+      const catalogInput = document.getElementById("catalog-search-input");
+      if (catalogInput) catalogInput.value = headerInput.value;
+
+      // Restablecer botones de categoría a 'all'
+      document.querySelectorAll(".filter-tag-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.category === "all");
+      });
+
+      this.filterAndSortCatalog("all", q);
+
+      // Scroll suave a los lotes
+      const batchesSection = document.getElementById("batches");
+      if (batchesSection) {
+        batchesSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      this.playBeep();
+      if (q) {
+        this.showToast(`Buscando en laboratorio: "${headerInput.value}"`);
+      }
+    };
+
+    headerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        executeSearch();
+      }
+    });
+
+    if (headerBtn) {
+      headerBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        executeSearch();
       });
     }
   }

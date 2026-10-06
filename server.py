@@ -4,19 +4,34 @@ import json
 import sqlite3
 import os
 import urllib.parse
+import urllib.request
+import re
+import time
 from datetime import datetime
 
 PORT = int(os.environ.get("PORT", 8080))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "capn_cook_inventory.db")
 
+# Control de abuso y Rate Limiting en memoria (15 peticiones/min por IP)
+IP_RATE_LIMITS = {}
+MAX_REQUESTS_PER_MINUTE = 15
+
+def is_rate_limited(ip):
+    now = time.time()
+    timestamps = IP_RATE_LIMITS.get(ip, [])
+    timestamps = [t for t in timestamps if now - t < 60]
+    if len(timestamps) >= MAX_REQUESTS_PER_MINUTE:
+        IP_RATE_LIMITS[ip] = timestamps
+        return True
+    timestamps.append(now)
+    IP_RATE_LIMITS[ip] = timestamps
+    return False
+
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
-
-import urllib.request
-import re
 
 # Motor conversacional de Jesse Pinkman / Cap'n Cook con Inteligencia Artificial y Fallback Local
 def process_jesse_ai_chat(user_msg, history=None, active_ids=None):
@@ -250,19 +265,38 @@ class CapnCookHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(sales, ensure_ascii=False).encode("utf-8"))
             return
 
-        return super().do_GET()
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
 
         if parsed.path == "/api/chat":
+            # 1. Aplicar Rate Limiting por IP
+            client_ip = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
+            if is_rate_limited(client_ip):
+                self.send_response(429)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "error": "Límite de peticiones excedido.",
+                    "reply": "¡Ey hermano, baja un cambio! Estás cocinando demasiado rápido. Espera un momento antes de volver a preguntar, biatch."
+                }, ensure_ascii=False).encode("utf-8"))
+                return
+
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length).decode("utf-8")
             try:
                 data = json.loads(body)
-                user_msg = data.get("message", "")
-                history = data.get("history", [])
-                active_prods = data.get("active_products", [])
+                # 2. Sanitización estricta: truncar mensaje a 350 caracteres
+                user_msg = data.get("message", "")[:350].strip()
+                history = data.get("history", [])[-6:]
+                active_prods = data.get("active_products", [])[:4]
                 result = process_jesse_ai_chat(user_msg, history, active_prods)
                 
                 self.send_response(200)
