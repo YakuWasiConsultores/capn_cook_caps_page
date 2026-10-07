@@ -1,13 +1,11 @@
-import http.server
-import socketserver
+import os
 import json
 import sqlite3
-import os
-import urllib.parse
 import urllib.request
 import re
 import time
 from datetime import datetime
+from flask import Flask, request, jsonify, send_from_directory
 
 PORT = int(os.environ.get("PORT", 8080))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -112,8 +110,7 @@ Devuelve un JSON estrictamente válido:
                     "chips": parsed.get("chips", ["Ver más gorras", "Guía de tallas"]),
                     "timestamp": datetime.now().isoformat()
                 }
-        except Exception as e:
-            # Fallback en caso de timeout o red
+        except Exception:
             pass
 
     # 2. Fallback conversacional local inteligente con expresiones regulares y límites de palabra
@@ -225,180 +222,142 @@ def local_jesse_chat_engine(user_msg, history, active_ids, products, prod_map):
         "timestamp": datetime.now().isoformat()
     }
 
-class CapnCookHandler(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=BASE_DIR, **kwargs)
+# ==============================================================================
+# APLICACIÓN FLASK PARA PRODUCCIÓN (RENDER / GUNICORN / WSGI COMPATIBLE)
+# ==============================================================================
+app = Flask(__name__, static_folder=BASE_DIR, static_url_path="")
 
-    def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        
-        if parsed.path == "/api/inventario":
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute("SELECT * FROM gorras_inventario ORDER BY id ASC")
-            items = [dict(row) for row in cur.fetchall()]
-            conn.close()
-            
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(json.dumps(items, ensure_ascii=False).encode("utf-8"))
-            return
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    return response
 
-        elif parsed.path == "/api/ventas":
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT v.*, g.nombre_oficial, g.silueta 
-                FROM ventas_pedidos v 
-                JOIN gorras_inventario g ON v.id_producto = g.id 
-                ORDER BY v.id_venta DESC
-            """)
-            sales = [dict(row) for row in cur.fetchall()]
-            conn.close()
+# Ruta principal: Servir index.html
+@app.route("/", methods=["GET"])
+def index():
+    return send_from_directory(BASE_DIR, "index.html")
 
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(json.dumps(sales, ensure_ascii=False).encode("utf-8"))
-            return
+# Health Check oficial para Render
+@app.route("/healthz", methods=["GET", "HEAD"])
+def healthz():
+    return "OK", 200
 
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
+# API: Inventario en tiempo real
+@app.route("/api/inventario", methods=["GET"])
+def api_inventario():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM gorras_inventario ORDER BY id ASC")
+    items = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(items)
 
-    def do_POST(self):
-        parsed = urllib.parse.urlparse(self.path)
+# API: Historial de Ventas
+@app.route("/api/ventas", methods=["GET"])
+def api_ventas():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT v.*, g.nombre_oficial, g.silueta 
+        FROM ventas_pedidos v 
+        JOIN gorras_inventario g ON v.id_producto = g.id 
+        ORDER BY v.id_venta DESC
+    """)
+    sales = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(sales)
 
-        if parsed.path == "/api/chat":
-            # 1. Aplicar Rate Limiting por IP
-            client_ip = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
-            if is_rate_limited(client_ip):
-                self.send_response(429)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.end_headers()
-                self.wfile.write(json.dumps({
-                    "error": "Límite de peticiones excedido.",
-                    "reply": "¡Ey hermano, baja un cambio! Estás cocinando demasiado rápido. Espera un momento antes de volver a preguntar, biatch."
-                }, ensure_ascii=False).encode("utf-8"))
-                return
+# API: Chatbot con Jesse Pinkman (con Rate Limiting)
+@app.route("/api/chat", methods=["POST", "OPTIONS"])
+def api_chat():
+    if request.method == "OPTIONS":
+        return "", 200
 
-            content_length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(content_length).decode("utf-8")
-            try:
-                data = json.loads(body)
-                # 2. Sanitización estricta: truncar mensaje a 350 caracteres
-                user_msg = data.get("message", "")[:350].strip()
-                history = data.get("history", [])[-6:]
-                active_prods = data.get("active_products", [])[:4]
-                result = process_jesse_ai_chat(user_msg, history, active_prods)
-                
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.end_headers()
-                self.wfile.write(json.dumps(result, ensure_ascii=False).encode("utf-8"))
-            except Exception as e:
-                self.send_response(400)
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
-            return
+    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
+    if is_rate_limited(client_ip):
+        return jsonify({
+            "error": "Límite de peticiones excedido.",
+            "reply": "¡Ey hermano, baja un cambio! Estás cocinando demasiado rápido. Espera un momento antes de volver a preguntar, biatch."
+        }), 429
 
-        elif parsed.path == "/api/comprar":
-            content_length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(content_length).decode("utf-8")
-            try:
-                data = json.loads(body)
-                prod_id = data.get("id")
-                qty = int(data.get("cantidad", 1))
-                cliente = data.get("cliente", "Cliente Online")
-                metodo = data.get("metodo", "El Barril / WhatsApp")
+    data = request.get_json(silent=True) or {}
+    user_msg = (data.get("message") or "")[:350].strip()
+    history = (data.get("history") or [])[-6:]
+    active_prods = (data.get("active_products") or [])[:4]
 
-                conn = get_db()
-                cur = conn.cursor()
-                
-                # Transacción atómica
-                cur.execute("SELECT id, nombre_oficial, precio_venta, stock FROM gorras_inventario WHERE id = ?", (prod_id,))
-                prod = cur.fetchone()
-                
-                if not prod:
-                    conn.close()
-                    self.send_response(404)
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"success": False, "error": "Producto no encontrado"}).encode("utf-8"))
-                    return
-                
-                current_stock = prod["stock"]
-                if current_stock < qty:
-                    conn.close()
-                    self.send_response(400)
-                    self.end_headers()
-                    self.wfile.write(json.dumps({
-                        "success": False, 
-                        "error": f"Stock insuficiente. Quedan solo {current_stock} unidades disponibles."
-                    }).encode("utf-8"))
-                    return
+    result = process_jesse_ai_chat(user_msg, history, active_prods)
+    return jsonify(result)
 
-                new_stock = current_stock - qty
-                price = prod["precio_venta"]
-                total = price * qty
-                now = datetime.now().isoformat()
+# API: Transacción de Compra Atómica
+@app.route("/api/comprar", methods=["POST", "OPTIONS"])
+def api_comprar():
+    if request.method == "OPTIONS":
+        return "", 200
 
-                # Descontar stock y registrar venta
-                cur.execute("UPDATE gorras_inventario SET stock = ? WHERE id = ?", (new_stock, prod_id))
-                cur.execute("""
-                    INSERT INTO ventas_pedidos (id_producto, cantidad, precio_unitario, total_usd, metodo_pago, cliente_contacto, fecha)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (prod_id, qty, price, total, metodo, cliente, now))
-                
-                sale_id = cur.lastrowid
-                conn.commit()
-                conn.close()
+    data = request.get_json(silent=True) or {}
+    prod_id = data.get("id")
+    qty = int(data.get("cantidad", 1))
+    cliente = data.get("cliente", "Cliente Online")
+    metodo = data.get("metodo", "El Barril / WhatsApp")
 
-                response_data = {
-                    "success": True,
-                    "order_id": sale_id,
-                    "product_id": prod_id,
-                    "product_name": prod["nombre_oficial"],
-                    "quantity": qty,
-                    "total_usd": total,
-                    "new_stock": new_stock,
-                    "message": f"¡Cocinado! Compra confirmada por {qty}x {prod['nombre_oficial']}. Stock remanente en bodega: {new_stock} unidades."
-                }
+    conn = get_db()
+    cur = conn.cursor()
 
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.end_headers()
-                self.wfile.write(json.dumps(response_data, ensure_ascii=False).encode("utf-8"))
-
-            except Exception as e:
-                self.send_response(500)
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode("utf-8"))
-            return
-
-        return super().do_POST()
-
-def run_server():
-    server = socketserver.ThreadingTCPServer(("", PORT), CapnCookHandler)
-    server.allow_reuse_address = True
-    print(f"=== CAP'N COOK BACKEND SERVER ONLINE ===")
-    print(f"URL Local: http://localhost:{PORT}")
-    print(f"API Inventario: http://localhost:{PORT}/api/inventario")
-    print(f"API Chatbot:    http://localhost:{PORT}/api/chat")
-    print(f"API Comprar:    http://localhost:{PORT}/api/comprar")
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nServidor detenido por el usuario.")
-        server.server_close()
+        cur.execute("SELECT id, nombre_oficial, precio_venta, stock FROM gorras_inventario WHERE id = ?", (prod_id,))
+        prod = cur.fetchone()
+
+        if not prod:
+            conn.close()
+            return jsonify({"success": False, "error": "Producto no encontrado"}), 404
+
+        current_stock = prod["stock"]
+        if current_stock < qty:
+            conn.close()
+            return jsonify({
+                "success": False,
+                "error": f"Stock insuficiente. Quedan solo {current_stock} unidades disponibles."
+            }), 400
+
+        new_stock = current_stock - qty
+        price = prod["precio_venta"]
+        total = price * qty
+        now = datetime.now().isoformat()
+
+        cur.execute("UPDATE gorras_inventario SET stock = ? WHERE id = ?", (new_stock, prod_id))
+        cur.execute("""
+            INSERT INTO ventas_pedidos (id_producto, cantidad, precio_unitario, total_usd, metodo_pago, cliente_contacto, fecha)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (prod_id, qty, price, total, metodo, cliente, now))
+
+        sale_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "order_id": sale_id,
+            "product_id": prod_id,
+            "product_name": prod["nombre_oficial"],
+            "quantity": qty,
+            "total_usd": total,
+            "new_stock": new_stock,
+            "message": f"¡Cocinado! Compra confirmada por {qty}x {prod['nombre_oficial']}. Stock remanente en bodega: {new_stock} unidades."
+        })
+
+    except Exception as e:
+        conn.close()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# Servir archivos estáticos restantes (css, js, assets)
+@app.route("/<path:filename>", methods=["GET"])
+def static_proxy(filename):
+    return send_from_directory(BASE_DIR, filename)
 
 if __name__ == "__main__":
-    run_server()
+    print(f"=== CAP'N COOK FLASK SERVER ONLINE ===")
+    print(f"Host: 0.0.0.0 | Port: {PORT}")
+    print(f"URL: http://localhost:{PORT}")
+    app.run(host="0.0.0.0", port=PORT)

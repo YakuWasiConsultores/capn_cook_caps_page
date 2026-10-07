@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: capn-cook-caps
+    name: capn-cook-caps-page
     runtime: python
-    buildCommand: ""
-    startCommand: python server.py
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT
     envVars:
       - key: GEMINI_API_KEY
         sync: false

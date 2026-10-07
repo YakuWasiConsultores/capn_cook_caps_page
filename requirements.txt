@@ -1,2 +1,2 @@
-# Cap'n Cook Cap Store Backend
-# Utiliza librerías estándar nativas de Python (http.server, socketserver, sqlite3, urllib, json)
+Flask>=3.0.0
+gunicorn>=21.2.0
